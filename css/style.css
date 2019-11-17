@@ -1,0 +1,114 @@
+body {
+	overflow: scroll;
+}
+
+#upload-image-container,
+#result-contanier {
+	width: 200px;
+	height: 200px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+#upload-image-container canvas,
+#result-contanier canvas {
+	width: 100%;
+}
+
+#tile-container {
+	display: flex;
+	flex-direction: row;
+	flex-wrap: wrap;
+	background: url(../img/2.jpg);
+	background-size: 100% 100%;
+}
+
+#tile-container div {
+	border: solid 1px #000000;
+	/*background: #ffffff;*/
+	margin: 0;
+	padding: 0;
+	width: 33px;
+	height: 33px;
+	font-size: 15px;
+	opacity: 0.5;
+}
+
+.btn{
+	min-width: 50px;
+	max-width: 300px;
+	height: 30px;
+	margin: 10px;
+	text-align: center;
+	line-height: 30px;
+	background-color: gray;
+	color: #ffffff;
+	font-weight: 300;
+	font-size: 10px;
+}
+
+#check {
+	background-color: gray;
+	color: #ffffff;
+}
+
+#print {
+	background-color: red;
+	color: #ffffff;
+}
+
+#type-container {
+	width: 80vw;
+	height: 100px;
+	margin: 10px;
+	display: flex;
+	justify-content: flex-start;
+}
+
+#type-container div {
+	width: 100px;
+	height: 80px;
+	border: 1px solid #000;
+}
+
+
+#type-container div.black.hl,
+#tile-container div.black {
+	background-color: #000000;
+}
+
+#type-container div.wall.hl,
+#tile-container div.wall {
+	color: #FFFFFF;
+	background-color: #808080;
+}
+
+#type-container div.floor.hl,
+#tile-container div.floor {
+	background-color: #ffffff;
+}
+
+#type-container div.coin.hl,
+#tile-container div.coin {
+	background-color: #FFFF33;
+}
+
+#type-container div.item.hl,
+#tile-container div.item {
+	background-color: #FF0033;
+}
+
+#type-container div.born.hl,
+#tile-container div.born {
+	background-color: #00FF00;
+}
+
+#type-container div.exit.hl,
+#tile-container div.exit {
+	background-color: #0000FF;
+}
+
+#tile-container div.transparent {
+	background-color: #00ffffff;
+}

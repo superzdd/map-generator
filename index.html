@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<link rel="stylesheet" href="css/style.css">
+	</head>
+	<body>
+		<h1>step1 加载地图</h1>
+		<h5>可以点击下方按钮，把上次做到一半的地图照片导入进来不加载地图也可以，就是得重新绘制地图</h5>
+		<div id="upload">加载地图<input type="file" id="add-upload-input" @change="uploadFuns($event)" accept="image/*" class="page2-btn-upload button" /></div>
+		<div id="upload-image-container">
+			<canvas id="canvas-upload-image" width="1" height="1"></canvas>
+		</div>
+		
+		<h1>step2 绘制地图</h1>
+		<h5>下方几个单元格用于绘制地图上的每一个小方格，鼠标点击那个单元格，后面在地图里就会绘制那种地图类型</h5>
+		<h5>tip1：点击单元格即可绘制，绘制完成的单元格再点击一次会取消绘制</h5>
+		<h5>tip2：按住键盘a键，将鼠标在地图上拖动可实现移动绘制</h5>
+		<div id="type-container">
+		</div>
+		<div id="tile-container"></div>
+
+		<h1>step3 校验地图</h1>
+		<h5>检查所有区域是否还有漏填的</h5>
+		<!-- <div id="check" class="btn">校验地图</div> -->
+		<div id="fill-blank" class="btn">使用黑色填充其他单元格</div>
+		
+		<h1>step4 生成地图</h1>
+		<h5>点击下方按钮生成结果</h5>
+		<div id="print" class="btn">生成结果</div>
+		<div id="result-contanier">
+			<canvas id="canvas" width="1" height="1"></canvas>
+		</div>
+
+		
+
+		<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
+		<script type="text/javascript" src="js/app.js"></script>
+	</body>
+
+</html>
