@@ -112,3 +112,8 @@ body {
 #tile-container div.transparent {
 	background-color: #00ffffff;
 }
+
+#text-json-result{
+	width: 1024px;
+	height: 1024px;
+}

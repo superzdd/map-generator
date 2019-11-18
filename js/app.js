@@ -9,6 +9,8 @@ function hexify(intR, intG, intB) {
 		("0" + b.toString(16)).slice(-2);
 }
 
+const TILE_WIDTH = 256;
+
 let TYPE_TILE = {
 	BLACK: 'BLACK',
 	WALL: 'WALL',
@@ -32,19 +34,29 @@ let TYPE_TILE_NUMBER = {
 	NONE: 7,
 }
 
-
 let tilePoint = function(x = 0, y = 0, type = TYPE_TILE.NONE) {
 	this.x = x;
 	this.y = y;
 	this.type = type;
 }
 
+let mapJson = function() {
+	this.tileWidth = 0; // 一个小个子的宽度px
+	this.tilesEachLine = 0; // 每行的小格子数量
+	this.tilesEachColumn = 0; // 每列的小格子数量
+	this.bornPoint = new tilePoint(); // 出生点
+	this.exitPoint = new tilePoint(); // 终点
+	this.coinPoints = [];
+	this.itemPoints = [];
+	this.allPoints = [];
+}
+
 let appModel = {
 	mini_grid_count: 8,
-	grids_each_line: 13, // 每行的单元格数量
-	grids_each_column: 9, // 每列的单元格数量
+	tiles_each_line: 13, // 每行的单元格数量
+	tiles_each_column: 9, // 每列的单元格数量
 	div_grid_width: 35, // 页面展示的每个div正方形格子的宽高
-	canvas_grid_width: 10, // 最终生成到canvas时每个正方形格子的宽高
+	canvas_tile_width: 10, // 最终生成到canvas时每个正方形格子的宽高
 	result_canvas_total_width: 0, // 最终生成canvas地图的总宽度
 	result_canvas_total_height: 0, // 最终生成canvas地图的总高度
 	listTile: [], // 记录地图上每个点的信息
@@ -52,11 +64,11 @@ let appModel = {
 
 let appController = {
 	init: function() {
-		appModel.grids_each_line = appModel.grids_each_line * appModel.mini_grid_count;
-		appModel.grids_each_column = appModel.grids_each_column * appModel.mini_grid_count;
+		appModel.tiles_each_line = appModel.tiles_each_line * appModel.mini_grid_count;
+		appModel.tiles_each_column = appModel.tiles_each_column * appModel.mini_grid_count;
 
-		appModel.result_canvas_total_width = appModel.grids_each_line * appModel.canvas_grid_width;
-		appModel.result_canvas_total_height = appModel.grids_each_column * appModel.canvas_grid_width;
+		appModel.result_canvas_total_width = appModel.tiles_each_line * appModel.canvas_tile_width;
+		appModel.result_canvas_total_height = appModel.tiles_each_column * appModel.canvas_tile_width;
 	},
 	getModel: function() {
 		return appModel;
@@ -68,8 +80,8 @@ let appController = {
 	initlistTileFromImageData(data) {
 		let model = appModel;
 		model.listTile = [];
-		for (let y = 0, index = 0; y < model.result_canvas_total_height; y += model.canvas_grid_width) {
-			for (let x = 0; x < model.result_canvas_total_width; x += model.canvas_grid_width, index++) {
+		for (let y = 0, index = 0; y < model.result_canvas_total_height; y += model.canvas_tile_width) {
+			for (let x = 0; x < model.result_canvas_total_width; x += model.canvas_tile_width, index++) {
 				console.log(index);
 				let si = x + y * model.result_canvas_total_width;
 				let color_key = hexify(
@@ -129,6 +141,48 @@ let appController = {
 				tile.type = TYPE_TILE.BLACK;
 			}
 		}
+	},
+	/**
+	 * 导出json结果
+	 */
+	generateJsonResult() {
+		// 单个单元格宽高
+		// 横向格子数量
+		// 纵向格子数量
+		// 出生点
+		// 逃离点
+		// 金币点
+		// 道具点
+		// 所有点
+
+		let m = appModel;
+		let result = new mapJson()
+		result.tileWidth = TILE_WIDTH / m.mini_grid_count;
+		result.tilesEachLine = m.tiles_each_line;
+		result.tilesEachColumn = m.tiles_each_column;
+		for (let p of m.listTile) {
+			let new_p = new tilePoint(p.x, p.y, TYPE_TILE_NUMBER[p.type]);
+
+			if (p.type === TYPE_TILE.BORN) {
+				result.bornPoint = new_p;
+			}
+
+			if (p.type === TYPE_TILE.EXIT) {
+				result.exitPoint = new_p;
+			}
+
+			if (p.type === TYPE_TILE.COIN) {
+				result.coinPoints.push(new_p);
+			}
+
+			if (p.type === TYPE_TILE.ITEM) {
+				result.itemPoints.push(new_p);
+			}
+
+			result.allPoints.push(new_p);
+		}
+
+		return result;
 	}
 };
 
@@ -140,6 +194,7 @@ let appView = {
 	$type_container: $('#type-container'),
 	$canvas: $('#canvas'),
 	$fillBlank: $('#fill-blank'),
+	$textJsonResult: $('#text-json-result'),
 	allowPainting: false, // 标志位，表示允许在鼠标滑动的过程中绘制单元格
 	currentPaintingColor: '', // 记录当前正在绘制的单元格类型
 	listTile: [],
@@ -147,8 +202,8 @@ let appView = {
 		const model = appController.getModel();
 		console.log('set grid container css');
 		appView.$grid_container.css({
-			width: model.grids_each_line * model.div_grid_width + 'px',
-			height: model.grids_each_column * model.div_grid_width + 'px'
+			width: model.tiles_each_line * model.div_grid_width + 'px',
+			height: model.tiles_each_column * model.div_grid_width + 'px'
 		});
 
 		console.log('set canvas attr');
@@ -169,7 +224,7 @@ let appView = {
 		appView.initAllTiles();
 
 		appView.$addUploadInput.change(appView.uploadImageHandler);
-		
+
 		appView.$fillBlank.click(appView.fillBlank);
 
 		document.addEventListener('keydown', function(e) {
@@ -207,8 +262,8 @@ let appView = {
 		const view = appView;
 		model.listTile = [];
 
-		for (let y = 0, index = 1; y < model.grids_each_line; y++) {
-			for (let x = 0; x < model.grids_each_column; x++, index++) {
+		for (let y = 0, index = 1; y < model.tiles_each_line; y++) {
+			for (let x = 0; x < model.tiles_each_column; x++, index++) {
 				let p = new tilePoint(x, y);
 				model.listTile.push(p);
 				view.$grid_container.append($('<div id="' + index + '">' + '' + '</div>'));
@@ -220,12 +275,12 @@ let appView = {
 			let id = $cur.attr('id');
 			let tile = appController.getTileById(id);
 
-			if (tile.type != TYPE_TILE.NONE) {
-				appController.updateTileType(id, TYPE_TILE.NONE);
-				$cur.removeClass();
-			} else {
+			if (tile.type != appView.currentPaintingColor.toLowerCase()) {
 				appController.updateTileType(id, TYPE_TILE[appView.currentPaintingColor]);
 				$cur.removeClass().addClass(appView.currentPaintingColor.toLowerCase());
+			} else {
+				appController.updateTileType(id, TYPE_TILE.NONE);
+				$cur.removeClass();
 			}
 		});
 
@@ -254,7 +309,7 @@ let appView = {
 			image.src = e.target.result;
 			image.onload = function() {
 				_temp = document.getElementById('canvas-upload-image');
-				// _temp.width = _temp.height = model.canvas_grid_width; // assume square levels
+				// _temp.width = _temp.height = model.canvas_tile_width; // assume square levels
 				_temp = _temp.getContext('2d');
 				_temp.drawImage(image, 0, 0);
 				appView.readDatasToMap(_temp.getImageData(0, 0, model.result_canvas_total_width, model.result_canvas_total_height)
@@ -286,17 +341,20 @@ let appView = {
 		let ctx = document.getElementById('canvas').getContext('2d');
 
 		ctx.fillStyle = 'black';
-		ctx.fillRect(0, 0, model.grids_each_line * model.canvas_grid_width, model.grids_each_column * model.canvas_grid_width);
+		ctx.fillRect(0, 0, model.tiles_each_line * model.canvas_tile_width, model.tiles_each_column * model.canvas_tile_width);
 		$('#tile-container div').each(function() {
 			let $cur = $(this);
 			let id = parseInt($cur.attr('id'));
-			let y = Math.floor((id - 1) / model.grids_each_line);
-			let x = (id - 1) % model.grids_each_line;
+			let y = Math.floor((id - 1) / model.tiles_each_line);
+			let x = (id - 1) % model.tiles_each_line;
 			let gridColor = $cur.css('background-color');
 			ctx.fillStyle = gridColor;
-			ctx.fillRect(x * model.canvas_grid_width, y * model.canvas_grid_width, model.canvas_grid_width,
-				model.canvas_grid_width);
+			ctx.fillRect(x * model.canvas_tile_width, y * model.canvas_tile_width, model.canvas_tile_width,
+				model.canvas_tile_width);
 		})
+
+		let mapJSON = appController.generateJsonResult();
+		appView.$textJsonResult.text(JSON.stringify(mapJSON));
 
 		console.log('draw result done');
 	}
