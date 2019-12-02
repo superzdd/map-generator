@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>坐标变换</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				vertical-align: middle;
+			}
+		</style>
+	</head>
+
+	<body>
+		<canvas id="cvs"></canvas>
+		<img id="img" src="../../img/macao-full.png" alt="">
+
+		<script>
+			const SQRT_3 = Math.sqrt(3)
+			const CANVAS_WIDTH = 2048;
+			const CANVAS_HEIGHT = 2048;
+
+			let canvas = document.getElementById('cvs');
+			canvas.width = CANVAS_WIDTH;
+			canvas.height = CANVAS_HEIGHT;
+			let origin = {
+				x: CANVAS_WIDTH >> 1,
+				y: CANVAS_HEIGHT >> 1
+			};
+			let cvsCtx = canvas.getContext('2d');
+			cvsCtx.rect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+			cvsCtx.fillStyle = '#000000';
+			cvsCtx.fill();
+
+			let imgData = []
+			let imgDataTransformed = []
+
+			let img = document.getElementById('img')
+			img.onload = function() {
+				cvsCtx.drawImage(img, 0, 0);
+				let sourceData = cvsCtx.getImageData(0, 0, img.width, img.height).data;
+				for (let y = 0, index = 0; y < img.height; y++) {
+					for (let x = 0; x < img.width; x++, index++) {
+						let transformed = transform(x, y)
+						let r = sourceData[index * 4]
+						let g = sourceData[index * 4 + 1]
+						let b = sourceData[index * 4 + 2]
+
+						let color = `rgb(${r}, ${g}, ${b})`
+						cvsCtx.fillStyle = color;
+						cvsCtx.fillRect(transformed.x + origin.x, transformed.y + origin.y, 1, 1);
+
+						imgData.push({
+							x: x,
+							y: y,
+							color: color
+						})
+
+						imgDataTransformed.push({
+							x: transformed.x,
+							y: transformed.y,
+							color: color
+						})
+					}
+				}
+			}
+
+			function transform(x, y) {
+				let _x = (x + (SQRT_3 * y)) / 2
+				let _y = (SQRT_3 * y - x) / 2
+				return {
+					x: _x,
+					y: _y
+				}
+			}
+
+			function transformReverse(x, y) {
+				let _x = x - y
+				let _y = (SQRT_3 * (x + y)) / 3
+				return {
+					x: _x,
+					y: _y
+				}
+			}
+		</script>
+	</body>
+
+</html>

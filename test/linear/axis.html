@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta http-equiv="X-UA-Compatible" content="ie=edge" />
+		<title>坐标轴线性变换</title>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+				vertical-align: middle;
+			}
+		</style>
+	</head>
+
+	<body>
+		<canvas id="cvs"></canvas>
+		<script type="text/javascript" src="axis.js"></script>
+		<script>
+			let appModel = {
+				axisTickWidth: 25, // 坐标轴刻度步长
+				axisTransform: {
+					i: {
+						x: 2,
+						y: -2
+					},
+					j: {
+						x: 0,
+						y: 1
+					},
+				},
+				canvasInfo: {
+					width: 0,
+					height: 0,
+				},
+				transformMatrix: {
+					a: 0,
+					b: 0,
+					c: 0,
+					d: 0
+				},
+				axisCenter: {
+					x: 0,
+					y: 0,
+				}
+			};
+
+			let appController = {
+				init: function() {
+					appModel.canvasInfo.width = window.innerWidth;
+					appModel.canvasInfo.height = window.innerHeight;
+				},
+				initAxisTransform: function() {
+					appModel.axisTransform.i = {
+						x: 2,
+						y: 0
+					};
+					appModel.axisTransform.j = {
+						x: 0,
+						y: 1
+					};
+				},
+				getModel() {
+					return appModel;
+				}
+			};
+
+			let appView = {
+				canvas: document.getElementById('cvs'),
+				ctx: null,
+				axis: null,
+				axisTransform: null,
+				init: function() {
+					appView.initCanvas();
+					appView.initAxisCenter();
+					appView.initAxis();
+					appView.initTransformAxis();
+				},
+				initCanvas: function() {
+					const model = appController.getModel();
+					appView.canvas.width = model.canvasInfo.width;
+					appView.canvas.height = model.canvasInfo.height;
+
+					appView.ctx = appView.canvas.getContext('2d');
+					appView.ctx.rect(0, 0, model.canvasInfo.width, model.canvasInfo.height);
+					appView.ctx.fillStyle = '#000000';
+					appView.ctx.fill();
+				},
+				initAxisCenter() {
+					const model = appController.getModel();
+					model.axisCenter.x = model.canvasInfo.width >> 1;
+					model.axisCenter.y = model.canvasInfo.height >> 1;
+				},
+				initAxis() {
+					const model = appController.getModel();
+
+					appView.axis = new axis(9, 9, model.axisTickWidth, appView.ctx, model.axisCenter);
+					appView.axis.render();
+				},
+				initTransformAxis() {
+					const model = appController.getModel();
+					appView.axisTransform = new axis(9, 9, model.axisTickWidth, appView.ctx, model.axisCenter, model.axisTransform);
+					appView.axisTransform.render();
+				}
+			}
+
+			appController.init();
+			appView.init();
+		</script>
+	</body>
+
+</html>
