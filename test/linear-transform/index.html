@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="en">
-
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -8,32 +7,36 @@
 		<title>坐标变换</title>
 		<style>
 			* {
- 				margin: 0;
- 				padding: 0;
- 				vertical-align: middle;
- 			}
- 		</style>
+                margin: 0;
+                padding: 0;
+                vertical-align: middle;
+            }
+			
+			#cvs{
+				width: 100vw;
+			}
+        </style>
 	</head>
 
 	<body>
 		<canvas id="cvs"></canvas>
-		<img id="img" src="../../img/macao-full.png" alt="">
+		<canvas id="cvs-transform"></canvas>
+		<!-- <img id="img" src="../../img/macao-full.png" alt=""> -->
 		<script type="text/javascript" src="../linear/axis.js"></script>
 		<script>
 			const SQRT_3 = Math.sqrt(3);
 			const SQRT_3_3 = SQRT_3 / 3;
-			const IMAGE_WIDTH = 1024;
-			const IMAGE_HEIGHT = 1024;
+			const IMAGE_WIDTH = 2048;
 			let appModel = {
 				axisTickWidth: 25, // 坐标轴刻度步长
 				axisTransform: {
 					i: {
-						x: 1,
-						y: SQRT_3_3
+						x: 0.5,
+						y: 0.5,
 					},
 					j: {
-						x: -1,
-						y: SQRT_3_3
+						x: -SQRT_3 * 0.5,
+						y: SQRT_3 * 0.5,
 					},
 				},
 				canvasInfo: {
@@ -44,46 +47,35 @@
 					a: 0,
 					b: 0,
 					c: 0,
-					d: 0
+					d: 0,
 				},
-				axisCenter: {
-					x: 0,
-					y: 0,
-				}
 			};
 
 			let appController = {
 				init: function() {
-					appModel.canvasInfo.width = 2048;
-					appModel.canvasInfo.height = 2048;
-				},
-				initAxisTransform: function() {
-					appModel.axisTransform.i = {
-						x: 2,
-						y: 0
-					};
-					appModel.axisTransform.j = {
-						x: 0,
-						y: 1
-					};
+					appModel.canvasInfo.width = appModel.canvasInfo.height = IMAGE_WIDTH * 3;
 				},
 				getModel() {
 					return appModel;
-				}
+				},
 			};
 			let appView = {
 				canvas: document.getElementById('cvs'),
+				canvasTransform: document.getElementById('cvs-transform'),
 				ctx: null,
+				ctxTransform: null,
 				axis: null,
 				axisTransform: null,
 				imgData: [],
 				init: async function() {
 					appView.initCanvas();
-					appView.initAxisCenter();
-					await appView.initImage();
 					appView.initAxis();
 					appView.initTransformAxis();
-					appView.initTransformImage();
+					await appView.initImage();
+					
+					// 渲染坐标轴
+					appView.axis.render();
+					appView.axisTransform.render();
 				},
 				initCanvas: function() {
 					const model = appController.getModel();
@@ -91,109 +83,112 @@
 					appView.canvas.height = model.canvasInfo.height;
 
 					appView.ctx = appView.canvas.getContext('2d');
-					appView.ctx.rect(0, 0, model.canvasInfo.width, model.canvasInfo.height);
+					appView.ctx.rect(
+						0,
+						0,
+						model.canvasInfo.width,
+						model.canvasInfo.height
+					);
 					appView.ctx.fillStyle = '#000000';
 					appView.ctx.fill();
 				},
-				initAxisCenter() {
-					const model = appController.getModel();
-					model.axisCenter.x = 512;
-					model.axisCenter.y = 512;
-				},
 				initAxis() {
 					const model = appController.getModel();
-
-					appView.axis = new axis(25, 25, model.axisTickWidth, appView.ctx, model.axisCenter);
-					appView.axis.render();
+					appView.axis = new axis(
+						50,
+						50,
+						model.axisTickWidth,
+						appView.ctx, {
+							x: IMAGE_WIDTH / 2,
+							y: IMAGE_WIDTH / 2,
+						}
+					);
 				},
 				initTransformAxis() {
 					const model = appController.getModel();
-					appView.axisTransform = new axis(25, 25, model.axisTickWidth, appView.ctx, {
-						x: 2048 * 3 / 4,
-						y: 2048 * 3 / 4
-					}, model.axisTransform);
-					appView.axisTransform.render();
+					appView.axisTransform = new axis(
+						50,
+						50,
+						model.axisTickWidth,
+						appView.ctx, {
+							x: IMAGE_WIDTH * 1.5,
+							y: IMAGE_WIDTH * 1.5,
+						},
+						model.axisTransform
+					);
 				},
 				initImage() {
 					return new Promise((res, rej) => {
+						console.log(`init image start`);
 						let imgData = [];
 						let imgDataTransformed = [];
-						let img = document.getElementById('img');
+						let img = new Image();
 						img.onload = function() {
-							const center = appController.getModel().axisCenter;
-							appView.ctx.drawImage(img, center.x - img.width / 2, center.y - img.height / 2);
+							console.log(`init image loaded`);
+							const center = appView.axis.center;
+							appView.ctx.drawImage(
+								img,
+								center.x - img.width / 2,
+								center.y - img.height / 2
+							);
 
 							let sourceData = appView.ctx.getImageData(
-									center.x - img.width / 2,
-									center.y - img.height / 2,
-									img.width,
-									img.height)
-								.data;
+								center.x - img.width / 2,
+								center.y - img.height / 2,
+								img.width,
+								img.height
+							).data;
 
 							for (let y = 0, index = 0; y < img.height; y++) {
 								for (let x = 0; x < img.width; x++, index++) {
-									let transformed = transform(x, y)
-									let r = sourceData[index * 4]
-									let g = sourceData[index * 4 + 1]
-									let b = sourceData[index * 4 + 2]
+									let r = sourceData[index * 4];
+									let g = sourceData[index * 4 + 1];
+									let b = sourceData[index * 4 + 2];
 
-									let color = `rgb(${r}, ${g}, ${b})`
-									// cvsCtx.fillStyle = color;
-									// cvsCtx.fillRect(transformed.x + origin.x, transformed.y + origin.y, 1, 1);
+									let color = `rgb(${r}, ${g}, ${b})`;
 
-									appView.imgData.push({
-										x: x,
-										y: y,
-										color: color
-									});
-									// imgDataTransformed.push({
-									// 	x: transformed.x,
-									// 	y: transformed.y,
-									// 	color: color
-									// })
+									appView.renderTransformPoint(index, color);
 								}
 							}
 							console.log(`init image complete`);
 							res();
-						}
+						};
+						img.src = '../../img/macao-all-2048.jpg';
 					});
 				},
 				initTransformImage() {
 					const imgData = appView.imgData;
 					const tickWidth = appController.getModel().axisTickWidth;
 
-					for (let i = 0; i < imgData.length; i++) {
-						let x = i % IMAGE_WIDTH - IMAGE_WIDTH / 2;
-						let y = IMAGE_WIDTH / 2 - Math.floor(i / IMAGE_WIDTH);
-						console.log(`${JSON.stringify({x,y})}`);
+					for (let i = 1; i <= imgData.length; i++) {
+						let x = ((i - 1) % IMAGE_WIDTH) - IMAGE_WIDTH / 2;
+						let y = -Math.floor((i - 1) / IMAGE_WIDTH) +
+							IMAGE_WIDTH / 2;
 
-						// let p = new point(x / tickWidth, y / tickWidth, appView.axisTransform);
-						// p.render(appView.ctx, imgData[i].color);
+						let p = new point(
+							x / tickWidth,
+							y / tickWidth,
+							appView.axisTransform
+						);
+						p.render(appView.ctx, imgData[i].color);
 					}
 				},
-			}
+				renderTransformPoint(index, color) {
+					const tickWidth = appController.getModel().axisTickWidth;
+					let x = ((index - 1) % IMAGE_WIDTH) - IMAGE_WIDTH / 2;
+					let y = -Math.floor((index - 1) / IMAGE_WIDTH) +
+						IMAGE_WIDTH / 2;
+					let p = new point(
+						x / tickWidth,
+						y / tickWidth,
+						appView.axisTransform
+					);
+					p.render(appView.ctx, color);
+				},
+			};
 
 			appController.init();
 			appView.init();
-
-			function transform(x, y) {
-				let _x = (x + (SQRT_3 * y)) / 2
-				let _y = (SQRT_3 * y - x) / 2
-				return {
-					x: _x,
-					y: _y
-				}
-			}
-
-			function transformReverse(x, y) {
-				let _x = x - y
-				let _y = (SQRT_3 * (x + y)) / 3
-				return {
-					x: _x,
-					y: _y
-				}
-			}
 		</script>
 	</body>
-
 </html>

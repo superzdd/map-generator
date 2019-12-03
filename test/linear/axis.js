@@ -31,7 +31,7 @@ function point(x, y, axis) {
 	this.render = function(ctx, color) {
 		let renderPoint = {
 			x: this.x * this.axis.stepWidth + this.axis.center.x,
-			y: this.y * axis.stepWidth + this.axis.center.y,
+			y: this.axis.center.y - this.y * axis.stepWidth ,
 		};
 
 		// ctx.strokeStyle = this.color;
@@ -108,11 +108,9 @@ function axis(x, y, stepWidth, ctx, center, transform = null) {
 
 	this.renderMainXY = function() {
 		let lineColor = '#6c6c6c';
-		if (!!this.transform) {
-			lineColor = '#ffffff';
-		}
-		let lHor = new line(this, new point(-1 * y, 0, this), new point(y, 0, this), lineColor);
-		let lVer = new line(this, new point(0, y, this), new point(0, -1 * y, this), lineColor);
+		
+		let lHor = new line(this, new point(-1 * y, 0, this), new point(y, 0, this), 'blue');
+		let lVer = new line(this, new point(0, y, this), new point(0, -1 * y, this), 'green');
 
 		this.mainLines.push(lHor);
 		this.mainLines.push(lVer);
