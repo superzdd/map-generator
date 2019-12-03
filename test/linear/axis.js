@@ -55,9 +55,9 @@ function line(axis, startPoint, endPoint, color) {
 	this.renderEndPoint = null;
 
 	// init
-	let startX = axis.center.x - startPoint.x * axis.stepWidth;
+	let startX = axis.center.x + startPoint.x * axis.stepWidth;
 	let startY = axis.center.y - startPoint.y * axis.stepWidth;
-	let endX = axis.center.x - endPoint.x * axis.stepWidth;
+	let endX = axis.center.x + endPoint.x * axis.stepWidth;
 	let endY = axis.center.y - endPoint.y * axis.stepWidth;
 	this.renderStartPoint = {
 		x: startX,

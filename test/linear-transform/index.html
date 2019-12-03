@@ -12,16 +12,21 @@
                 vertical-align: middle;
             }
 			
-			#cvs{
+			canvas{
 				width: 100vw;
+				max-width: 1024px;
 			}
         </style>
 	</head>
 
 	<body>
 		<canvas id="cvs"></canvas>
-		<canvas id="cvs-transform"></canvas>
-		<!-- <img id="img" src="../../img/macao-full.png" alt=""> -->
+		<canvas id="cvs2"></canvas>
+		<canvas id="cvs3"></canvas>
+
+		<canvas id="cvs80"></canvas>
+
+
 		<script type="text/javascript" src="../linear/axis.js"></script>
 		<script>
 			const SQRT_3 = Math.sqrt(3);
@@ -39,6 +44,16 @@
 						y: SQRT_3 * 0.5,
 					},
 				},
+				axisReverse: {
+					i: {
+						x: 1,
+						y: -1 / SQRT_3,
+					},
+					j: {
+						x: 1,
+						y: 1 / SQRT_3,
+					},
+				},
 				canvasInfo: {
 					width: 0,
 					height: 0,
@@ -53,44 +68,60 @@
 
 			let appController = {
 				init: function() {
-					appModel.canvasInfo.width = appModel.canvasInfo.height = IMAGE_WIDTH * 3;
+					appModel.canvasInfo.width = appModel.canvasInfo.height = IMAGE_WIDTH;
 				},
 				getModel() {
 					return appModel;
 				},
 			};
+
 			let appView = {
 				canvas: document.getElementById('cvs'),
-				canvasTransform: document.getElementById('cvs-transform'),
 				ctx: null,
-				ctxTransform: null,
+				canvas2: document.getElementById('cvs2'),
+				ctx2: null,
+				canvas3: document.getElementById('cvs3'),
+				ctx3: null,
+				canvas80: document.getElementById('cvs80'),
+				ctx80: null,
 				axis: null,
-				axisTransform: null,
+				axis2: null,
+				axis3: null,
 				imgData: [],
 				init: async function() {
-					appView.initCanvas();
+					appView.ctx = appView.initCanvas(appView.canvas);
+					appView.ctx2 = appView.initCanvas(appView.canvas2);
+					appView.ctx3 = appView.initCanvas(appView.canvas3);
+					appView.ctx80 = appView.initCanvas(appView.canvas80, 0.8);
 					appView.initAxis();
-					appView.initTransformAxis();
+					appView.initAxis2();
+					appView.initAxis3();
+					// appView.initTransformAxis();
 					await appView.initImage();
-					
+					// appView.reverseImage();
+					appView.render80Image();
+					appView.creatAndRender(50);
+					appView.creatAndRender(40);
+					appView.creatAndRender(30);
 					// 渲染坐标轴
 					appView.axis.render();
-					appView.axisTransform.render();
+					appView.axis2.render();
+					appView.axis3.render();
 				},
-				initCanvas: function() {
+				initCanvas: function(canvas, per = 1) {
 					const model = appController.getModel();
-					appView.canvas.width = model.canvasInfo.width;
-					appView.canvas.height = model.canvasInfo.height;
-
-					appView.ctx = appView.canvas.getContext('2d');
-					appView.ctx.rect(
+					canvas.width = model.canvasInfo.width * per;
+					canvas.height = model.canvasInfo.height * per;
+					let ctx = canvas.getContext('2d');
+					ctx.rect(
 						0,
 						0,
 						model.canvasInfo.width,
 						model.canvasInfo.height
 					);
-					appView.ctx.fillStyle = '#000000';
-					appView.ctx.fill();
+					ctx.fillStyle = '#000000';
+					ctx.fill();
+					return ctx;
 				},
 				initAxis() {
 					const model = appController.getModel();
@@ -104,17 +135,30 @@
 						}
 					);
 				},
-				initTransformAxis() {
+				initAxis2() {
 					const model = appController.getModel();
-					appView.axisTransform = new axis(
+					appView.axis2 = new axis(
 						50,
 						50,
 						model.axisTickWidth,
-						appView.ctx, {
-							x: IMAGE_WIDTH * 1.5,
-							y: IMAGE_WIDTH * 1.5,
+						appView.ctx2, {
+							x: IMAGE_WIDTH / 2,
+							y: IMAGE_WIDTH / 2,
 						},
 						model.axisTransform
+					);
+				},
+				initAxis3() {
+					const model = appController.getModel();
+					appView.axis3 = new axis(
+						50,
+						50,
+						model.axisTickWidth,
+						appView.ctx3, {
+							x: IMAGE_WIDTH / 2,
+							y: IMAGE_WIDTH / 2,
+						},
+						model.axisReverse
 					);
 				},
 				initImage() {
@@ -168,7 +212,7 @@
 						let p = new point(
 							x / tickWidth,
 							y / tickWidth,
-							appView.axisTransform
+							appView.axis2
 						);
 						p.render(appView.ctx, imgData[i].color);
 					}
@@ -181,10 +225,65 @@
 					let p = new point(
 						x / tickWidth,
 						y / tickWidth,
-						appView.axisTransform
+						appView.axis2
 					);
-					p.render(appView.ctx, color);
+					p.render(appView.ctx2, color);
 				},
+				reverseImage() {
+					console.log(`reverse image start`);
+
+					let sourceData = appView.ctx2.getImageData(
+						0,
+						0,
+						IMAGE_WIDTH,
+						IMAGE_WIDTH
+					).data;
+
+					for (let y = 0, index = 0; y < IMAGE_WIDTH; y++) {
+						for (let x = 0; x < IMAGE_WIDTH; x++, index++) {
+							let r = sourceData[index * 4];
+							let g = sourceData[index * 4 + 1];
+							let b = sourceData[index * 4 + 2];
+
+							let color = `rgb(${r}, ${g}, ${b})`;
+
+							appView.renderReversePoint(index, color);
+						}
+					}
+					console.log(`init image complete`);
+				},
+				renderReversePoint(index, color) {
+					const tickWidth = appController.getModel().axisTickWidth;
+					let x = ((index - 1) % IMAGE_WIDTH) - IMAGE_WIDTH / 2;
+					let y = -Math.floor((index - 1) / IMAGE_WIDTH) +
+						IMAGE_WIDTH / 2;
+					let p = new point(
+						x / tickWidth,
+						y / tickWidth,
+						appView.axis3
+					);
+					p.render(appView.ctx3, color);
+				},
+				render80Image() {
+					// appView.ctx80.drawImage(appView.canvas2, 0, 0);
+					appView.ctx80.drawImage(appView.canvas2, -1 * 0.1 * IMAGE_WIDTH, -1 * 0.1 * IMAGE_WIDTH);
+				},
+				creatAndRender(per) {
+					const realPer = per/100;
+					const model = appController.getModel();
+					let canvas = document.createElement('canvas');
+					canvas.width = model.canvasInfo.width * realPer;
+					canvas.height = model.canvasInfo.height * realPer;
+					let ctx = canvas.getContext('2d');
+					ctx.rect(0, 0, model.canvasInfo.width, model.canvasInfo.height);
+					ctx.fillStyle = '#000000';
+					ctx.fill();
+					
+					let delta = (1-realPer)/2;
+					ctx.drawImage(appView.canvas2, -1 * delta * IMAGE_WIDTH, -1 * delta * IMAGE_WIDTH);
+					
+					document.body.appendChild(canvas)
+				}
 			};
 
 			appController.init();
