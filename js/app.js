@@ -11,33 +11,89 @@ function hexify(intR, intG, intB) {
 
 const TILE_WIDTH = 256;
 
-let TYPE_TILE = {
-	BLACK: 'BLACK',
-	WALL: 'WALL',
-	FLOOR: 'FLOOR',
-	COIN: 'COIN',
-	ITEM: 'ITEM',
-	BORN: 'BORN',
-	EXIT: 'EXIT',
-	NONE: 'NONE',
-}
-
 // 地图单元格类型和数字的对应关系,用于生成最后的数组
-let TYPE_TILE_NUMBER = {
-	BLACK: 0,
-	WALL: 1,
-	FLOOR: 2,
-	COIN: 3,
-	ITEM: 4,
-	BORN: 5,
-	EXIT: 6,
-	NONE: 7,
+let TYPE_TILE_INFO = {
+	BLACK: {
+		id: 0,
+		color: '#000000',
+	},
+	WALL: {
+		id: 1,
+		color: '#808080',
+	},
+	FLOOR: {
+		id: 2,
+		color: '#ffcc66',
+	},
+	COIN: {
+		id: 3,
+		color: '#ffff33',
+	},
+	ITEM: {
+		id: 4,
+		color: '#ff0033',
+	},
+	BORN: {
+		id: 5,
+		color: '#00ff00',
+	},
+	EXIT: {
+		id: 6,
+		color: '#0000ff',
+	},
+	NONE: {
+		id: 7,
+		color: 'transparent',
+	}
 }
 
-let tilePoint = function(x = 0, y = 0, type = TYPE_TILE.NONE) {
-	this.x = x;
-	this.y = y;
+let TYPE_TILE = {};
+for (let key of Object.keys(TYPE_TILE_INFO)) {
+	TYPE_TILE[key] = key;
+}
+
+/**
+ * lineIndex: 行
+ * columnIndex: 列
+ */
+let tilePoint = function(lineIndex = 0, columnIndex = 0, width = 0, type = TYPE_TILE.NONE) {
+	this.lineIndex = lineIndex;
+	this.columnIndex = columnIndex;
+	this.width = width;
+	this.lastType = TYPE_TILE.NONE;
 	this.type = type;
+	this.needUpdate = true;
+
+	this.update = function(type, force = false) {
+		if (this.type != type) {
+			this.lastType = this.type;
+			this.type = type;
+			this.needUpdate = true;
+		} else if (!force) {
+			this.type = this.lastType;
+			this.lastType = TYPE_TILE.NONE;
+			this.needUpdate = true;
+		}
+	}
+
+	this.render = function(ctx) {
+		if (!this.needUpdate) {
+			return;
+		}
+
+		this.needUpdate = false;
+
+		let _w = this.width;
+		let _y = this.lineIndex * _w;
+		let _x = this.columnIndex * _w;
+
+		ctx.strokeStyle = '#ffffff';
+		ctx.fillStyle = TYPE_TILE_INFO[this.type].color;
+
+		ctx.clearRect(_x, _y, _w, _w);
+		ctx.fillRect(_x, _y, _w, _w);
+		ctx.strokeRect(_x, _y, _w, _w);
+	}
 }
 
 let mapJson = function() {
@@ -52,14 +108,23 @@ let mapJson = function() {
 }
 
 let appModel = {
-	mini_grid_count: 8,
+	mini_grid_count: 1,
 	tiles_each_line: 13, // 每行的单元格数量
 	tiles_each_column: 9, // 每列的单元格数量
-	div_grid_width: 35, // 页面展示的每个div正方形格子的宽高
+	div_grid_width: 20, // 页面展示的每个div正方形格子的宽高
 	canvas_tile_width: 10, // 最终生成到canvas时每个正方形格子的宽高
 	result_canvas_total_width: 0, // 最终生成canvas地图的总宽度
 	result_canvas_total_height: 0, // 最终生成canvas地图的总高度
-	listTile: [], // 记录地图上每个点的信息
+	tileContainerInfo: {
+		width: 0,
+		height: 0,
+	},
+	listTile: [], // 记录地图上每个点的信息,
+	imgBackgroundInfo: {
+		src: '',
+		width: 0,
+		height: 0,
+	}
 };
 
 let appController = {
@@ -73,6 +138,10 @@ let appController = {
 	getModel: function() {
 		return appModel;
 	},
+	updateTileContainerInfo: function(width, height) {
+		appModel.tileContainerInfo.width = width;
+		appModel.tileContainerInfo.height = height;
+	},
 	/**
 	 * 从图片中初始化所有单元格信息
 	 * @param {Array} data 通过canvas读取的image数组数据
@@ -80,49 +149,22 @@ let appController = {
 	initlistTileFromImageData(data) {
 		let model = appModel;
 		model.listTile = [];
-		for (let y = 0, index = 0; y < model.result_canvas_total_height; y += model.canvas_tile_width) {
-			for (let x = 0; x < model.result_canvas_total_width; x += model.canvas_tile_width, index++) {
-				console.log(index);
-				let si = x + y * model.result_canvas_total_width;
+		// 逐行导入点
+		for (let line = 0, index = 0; line < model.result_canvas_total_height; line += model.canvas_tile_width) {
+			for (let column = 0; column < model.result_canvas_total_width; column += model.canvas_tile_width, index++) {
+				let si = column + line * model.result_canvas_total_width;
 				let color_key = hexify(
 					data[si * 4],
 					data[si * 4 + 1],
 					data[si * 4 + 2]);
 
-				let point = new tilePoint(x, y);
+				let point = new tilePoint(line / model.canvas_tile_width, column / model.canvas_tile_width, appView.canvasTilesInfo
+					.width);
 
-				switch (color_key) {
-					// wall
-					case '#808080':
-						point.type = TYPE_TILE.WALL;
-						break;
-						// floor
-					case '#ffffff':
-						point.type = TYPE_TILE.FLOOR;
-						break;
-						// coin
-					case '#ffff33':
-						point.type = TYPE_TILE.COIN;
-						break;
-						// item
-					case '#ff0033':
-						point.type = TYPE_TILE.ITEM;
-						break;
-						// born
-					case '#00ff00':
-						point.type = TYPE_TILE.BORN;
-						break;
-						// exit
-					case '#0000ff':
-						point.type = TYPE_TILE.EXIT;
-						break;
-						// black
-					case '#000000':
-						point.type = TYPE_TILE.BLACK;
-						break;
-					default:
-						point.type = TYPE_TILE.NONE;
-						break;
+				for (const [key, value] of Object.entries(TYPE_TILE_INFO)) {
+					if (value.color == color_key) {
+						point.type = TYPE_TILE[key];
+					}
 				}
 
 				model.listTile.push(point);
@@ -132,13 +174,26 @@ let appController = {
 	updateTileType(index, type) {
 		appModel.listTile[index - 1].type = type;
 	},
+	updateTile(x, y, type, forceUpdate = false) {
+		x = x - appView.canvasTilesInfo.x;
+		y = y - appView.canvasTilesInfo.y;
+		const tileWidth = Math.ceil(appView.canvasTilesInfo.width);
+		const lines = appModel.tiles_each_line; // 每行的单元格数量
+		const cols = appModel.tiles_each_column; // 每列的单元格数量
+
+		const index = Math.floor(x / tileWidth) + Math.floor(y / tileWidth) * lines;
+
+		console.log(`update tile ${index} to type ${type}===${JSON.stringify({x,y,tileWidth,lines,cols})}`);
+
+		appModel.listTile[index].update(type, forceUpdate);
+	},
 	getTileById(id) {
 		return appModel.listTile[parseInt(id) - 1];
 	},
 	fillListTileByBlack() {
 		for (let tile of appModel.listTile) {
 			if (tile.type == TYPE_TILE.NONE) {
-				tile.type = TYPE_TILE.BLACK;
+				tile.update(TYPE_TILE.BLACK);
 			}
 		}
 	},
@@ -161,7 +216,7 @@ let appController = {
 		result.tilesEachLine = m.tiles_each_line;
 		result.tilesEachColumn = m.tiles_each_column;
 		for (let p of m.listTile) {
-			let new_p = new tilePoint(p.x, p.y, TYPE_TILE_NUMBER[p.type]);
+			let new_p = new tilePoint(p.lineIndex, p.columnIndex, appView.canvasTilesInfo.width, TYPE_TILE_INFO[p.type].id);
 
 			if (p.type === TYPE_TILE.BORN) {
 				result.bornPoint = new_p;
@@ -188,42 +243,45 @@ let appController = {
 
 let appView = {
 	$addUploadInput: $('#add-upload-input'),
+	$addUploadBgInput: $('#add-upload-bg-input'),
+	$bg: $('#bg'),
 	$canvasUploadImage: $('#canvas-upload-image'),
 	$grid_container: $('#tile-container'),
 	$print: $('#print'),
 	$type_container: $('#type-container'),
 	$canvas: $('#canvas'),
+	canvasTilesInfo: {
+		x: 0, // 距离屏幕左边的距离
+		y: 0, // 距离屏幕上方的距离
+		width: 0, // 方块格宽度
+		ctx: null, // 画布实例
+	},
 	$fillBlank: $('#fill-blank'),
 	$textJsonResult: $('#text-json-result'),
+	$hintLast: $('#hint-last'),
+	$hintCurrent: $('#hint-current'),
 	allowPainting: false, // 标志位，表示允许在鼠标滑动的过程中绘制单元格
+	lastPaintingColor: '', // 记录上一个正在绘制的单元格颜色
 	currentPaintingColor: '', // 记录当前正在绘制的单元格类型
 	listTile: [],
-	init: function() {
-		const model = appController.getModel();
-		console.log('set grid container css');
-		appView.$grid_container.css({
-			width: model.tiles_each_line * model.div_grid_width + 'px',
-			height: model.tiles_each_column * model.div_grid_width + 'px'
-		});
-
-		console.log('set canvas attr');
-		appView.$canvas.attr({
-			width: model.result_canvas_total_width,
-			height: model.result_canvas_total_height,
-		});
-
-		appView.$canvasUploadImage.attr({
-			width: model.result_canvas_total_width,
-			height: model.result_canvas_total_height,
-		});
-
-		console.log('appView.initTypeGrids');
-		appView.initTypeGrids();
-
-		console.log('appView.initAllTiles');
-		appView.initAllTiles();
-
+	mousePosition: {
+		x: 0,
+		y: 0,
+	},
+	backgroundInfo: {
+		width: 0,
+		height: 0,
+		src: ''
+	},
+	lastRenderTime: 0,
+	fps: 1000 / 60,
+	init: async function() {
+		let model = appController.getModel();
 		appView.$addUploadInput.change(appView.uploadImageHandler);
+		appView.$addUploadBgInput.change(appView.uploadBGImageHandler);
+		appView.initResultCanvas();
+		appView.initUploadCanvas();
+		appView.initTypeGrids();
 
 		appView.$fillBlank.click(appView.fillBlank);
 
@@ -240,8 +298,80 @@ let appView = {
 		});
 
 		// 生成结果
-		appView.$print.click(() => {
-			appView.drawResult();
+		appView.$print.click(appView.drawResult);
+
+		appView.render();
+	},
+	initBackgroundImage: function() {
+		return new Promise((res, rej) => {
+			console.log('demo read image');
+			let image = new Image();
+
+			image.onload = function() {
+				console.log(`load image success: ${JSON.stringify({width:image.width,height:image.height})}`);
+
+				appView.backgroundInfo.width = image.width;
+				appView.backgroundInfo.height = image.height;
+				res();
+			}
+			image.src = './img/2.jpg';
+		});
+	},
+	initTileContainer: function() {
+		// await appView.initBackgroundImage();
+		appController.updateTileContainerInfo(appView.backgroundInfo.width, appView.backgroundInfo.height);
+		appView.$grid_container.css({
+			width: appView.backgroundInfo.width + 'px',
+			height: appView.backgroundInfo.height + 'px'
+		});
+	},
+	initCanvasTiles: function() {
+		console.log('initTilesCtx');
+		const model = appController.getModel();
+
+		const container = document.getElementById('tile-container');
+		const y = container.offsetTop;
+		const x = container.offsetLeft;
+
+		let canvas = document.getElementById('cvs-tiles');
+		canvas.width = appView.backgroundInfo.width;
+		canvas.height = appView.backgroundInfo.height;
+
+		let ctx = canvas.getContext('2d');
+		ctx.globalAlpha = 0.5;
+
+		appView.canvasTilesInfo.x = x;
+		appView.canvasTilesInfo.y = y;
+		appView.canvasTilesInfo.ctx = ctx;
+		appView.canvasTilesInfo.width = model.tileContainerInfo.width / model.tiles_each_line;
+
+		$('#cvs-tiles').mousemove(function(e) {
+			if (!appView.allowPainting) return;
+			if (!appView.currentPaintingColor) {
+				alert('请先选择一种地图类型');
+				return;
+			}
+
+			let {
+				pageX,
+				pageY
+			} = e;
+
+			appController.updateTile(pageX, pageY, appView.currentPaintingColor, true);
+		});
+
+		$('#cvs-tiles').click(function(e) {
+			if (!appView.currentPaintingColor) {
+				alert('请先选择一种地图类型');
+				return;
+			}
+
+			let {
+				pageX,
+				pageY
+			} = e;
+
+			appController.updateTile(pageX, pageY, appView.currentPaintingColor, false);
 		});
 	},
 	initTypeGrids: function() {
@@ -252,46 +382,47 @@ let appView = {
 
 		$('#type-container div').click(function() {
 			let $this = $(this);
+
+			if ($this.attr('gridtype') == appView.currentPaintingColor) return;
+
+			appView.lastPaintingColor = appView.currentPaintingColor;
 			appView.currentPaintingColor = $this.attr('gridtype');
 			$('#type-container div').removeClass('hl');
 			$this.addClass('hl');
+
+			appView.$hintCurrent.removeClass().addClass(appView.currentPaintingColor.toLowerCase());
+			appView.$hintLast.removeClass().addClass(appView.lastPaintingColor.toLowerCase());
 		});
 	},
 	initAllTiles: function() {
 		let model = appController.getModel();
-		const view = appView;
+		// const view = appView;
 		model.listTile = [];
 
-		for (let y = 0, index = 1; y < model.tiles_each_line; y++) {
-			for (let x = 0; x < model.tiles_each_column; x++, index++) {
-				let p = new tilePoint(x, y);
+		let width = appView.canvasTilesInfo.width;
+		console.log(`each tile width: ${width}`);
+
+		// 一行一行加入点
+		for (let line = 0, index = 1; line < model.tiles_each_column; line++) {
+			for (let column = 0; column < model.tiles_each_line; column++, index++) {
+				let p = new tilePoint(line, column, width, TYPE_TILE.NONE);
 				model.listTile.push(p);
-				view.$grid_container.append($('<div id="' + index + '">' + '' + '</div>'));
 			}
 		}
-
-		$('#tile-container div').click(function(e) {
-			let $cur = $(this);
-			let id = $cur.attr('id');
-			let tile = appController.getTileById(id);
-
-			if (tile.type != appView.currentPaintingColor.toLowerCase()) {
-				appController.updateTileType(id, TYPE_TILE[appView.currentPaintingColor]);
-				$cur.removeClass().addClass(appView.currentPaintingColor.toLowerCase());
-			} else {
-				appController.updateTileType(id, TYPE_TILE.NONE);
-				$cur.removeClass();
-			}
+	},
+	initResultCanvas: function() {
+		console.log('set canvas attr');
+		const model = appController.getModel();
+		appView.$canvas.attr({
+			width: model.result_canvas_total_width,
+			height: model.result_canvas_total_height,
 		});
-
-		$('#tile-container div').mousemove(function(e) {
-			let $cur = $(this);
-			if (!appView.allowPainting) return;
-
-			let id = $cur.attr('id');
-			let tile = appController.getTileById(id);
-			appController.updateTileType(id, TYPE_TILE[appView.currentPaintingColor]);
-			$cur.removeClass().addClass(appView.currentPaintingColor.toLowerCase());
+	},
+	initUploadCanvas: function() {
+		const model = appController.getModel();
+		appView.$canvasUploadImage.attr({
+			width: model.result_canvas_total_width,
+			height: model.result_canvas_total_height,
 		});
 	},
 	uploadImageHandler: function(e) {
@@ -309,11 +440,39 @@ let appView = {
 			image.src = e.target.result;
 			image.onload = function() {
 				_temp = document.getElementById('canvas-upload-image');
-				// _temp.width = _temp.height = model.canvas_tile_width; // assume square levels
 				_temp = _temp.getContext('2d');
 				_temp.drawImage(image, 0, 0);
 				appView.readDatasToMap(_temp.getImageData(0, 0, model.result_canvas_total_width, model.result_canvas_total_height)
 					.data);
+			}
+		}
+	},
+	uploadBGImageHandler: function(e) {
+		const model = appController.getModel();
+		let file = e.target.files[0];
+		// 确认选择的文件是图片
+		if (file.type.indexOf('image') != 0) return;
+		let reader = new FileReader();
+		reader.readAsDataURL(file);
+		reader.onload = function(e) {
+			let image = new Image();
+			image.src = e.target.result;
+			image.onload = function() {
+				let w = image.width;
+				let h = image.height;
+				if (w > 1024) {
+					w = 1024;
+					h = w * image.height / image.width;
+				}
+
+				appView.backgroundInfo.width = w;
+				appView.backgroundInfo.height = h;
+				appView.backgroundInfo.src = image.src;
+
+				appView.$bg.attr('src', image.src);
+				appView.initTileContainer();
+				appView.initCanvasTiles();
+				appView.initAllTiles();
 			}
 		}
 	},
@@ -342,21 +501,35 @@ let appView = {
 
 		ctx.fillStyle = 'black';
 		ctx.fillRect(0, 0, model.tiles_each_line * model.canvas_tile_width, model.tiles_each_column * model.canvas_tile_width);
-		$('#tile-container div').each(function() {
-			let $cur = $(this);
-			let id = parseInt($cur.attr('id'));
-			let y = Math.floor((id - 1) / model.tiles_each_line);
-			let x = (id - 1) % model.tiles_each_line;
-			let gridColor = $cur.css('background-color');
-			ctx.fillStyle = gridColor;
-			ctx.fillRect(x * model.canvas_tile_width, y * model.canvas_tile_width, model.canvas_tile_width,
+
+		for (let tile of model.listTile) {
+			ctx.fillStyle = TYPE_TILE_INFO[tile.type].color;
+			ctx.fillRect(tile.columnIndex * model.canvas_tile_width, tile.lineIndex * model.canvas_tile_width, model.canvas_tile_width,
 				model.canvas_tile_width);
-		})
+		}
 
 		let mapJSON = appController.generateJsonResult();
 		appView.$textJsonResult.text(JSON.stringify(mapJSON));
 
 		console.log('draw result done');
+	},
+	render: function() {
+		const now = Date.now();
+
+		if (now - appView.lastRenderTime < appView.fps) {
+			requestAnimationFrame(appView.render);
+			return;
+		}
+
+		appView.lastRenderTime = now;
+
+		let model = appController.getModel();
+
+		for (let p of model.listTile) {
+			p.render(appView.canvasTilesInfo.ctx);
+		}
+
+		requestAnimationFrame(appView.render);
 	}
 };
 
@@ -364,5 +537,4 @@ let appView = {
 $(document).ready(function() {
 	appController.init();
 	appView.init();
-	// setTimeout(function(){appView.init();},2000);
 });

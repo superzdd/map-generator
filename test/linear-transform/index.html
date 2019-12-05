@@ -23,10 +23,6 @@
 		<canvas id="cvs"></canvas>
 		<canvas id="cvs2"></canvas>
 		<canvas id="cvs3"></canvas>
-
-		<canvas id="cvs80"></canvas>
-
-
 		<script type="text/javascript" src="../linear/axis.js"></script>
 		<script>
 			const SQRT_3 = Math.sqrt(3);
@@ -82,8 +78,6 @@
 				ctx2: null,
 				canvas3: document.getElementById('cvs3'),
 				ctx3: null,
-				canvas80: document.getElementById('cvs80'),
-				ctx80: null,
 				axis: null,
 				axis2: null,
 				axis3: null,
@@ -92,14 +86,12 @@
 					appView.ctx = appView.initCanvas(appView.canvas);
 					appView.ctx2 = appView.initCanvas(appView.canvas2);
 					appView.ctx3 = appView.initCanvas(appView.canvas3);
-					appView.ctx80 = appView.initCanvas(appView.canvas80, 0.8);
 					appView.initAxis();
 					appView.initAxis2();
 					appView.initAxis3();
-					// appView.initTransformAxis();
 					await appView.initImage();
 					// appView.reverseImage();
-					appView.render80Image();
+					appView.creatAndRender(80);
 					appView.creatAndRender(50);
 					appView.creatAndRender(40);
 					appView.creatAndRender(30);
@@ -200,23 +192,6 @@
 						img.src = '../../img/macao-all-2048.jpg';
 					});
 				},
-				initTransformImage() {
-					const imgData = appView.imgData;
-					const tickWidth = appController.getModel().axisTickWidth;
-
-					for (let i = 1; i <= imgData.length; i++) {
-						let x = ((i - 1) % IMAGE_WIDTH) - IMAGE_WIDTH / 2;
-						let y = -Math.floor((i - 1) / IMAGE_WIDTH) +
-							IMAGE_WIDTH / 2;
-
-						let p = new point(
-							x / tickWidth,
-							y / tickWidth,
-							appView.axis2
-						);
-						p.render(appView.ctx, imgData[i].color);
-					}
-				},
 				renderTransformPoint(index, color) {
 					const tickWidth = appController.getModel().axisTickWidth;
 					let x = ((index - 1) % IMAGE_WIDTH) - IMAGE_WIDTH / 2;
@@ -263,10 +238,6 @@
 						appView.axis3
 					);
 					p.render(appView.ctx3, color);
-				},
-				render80Image() {
-					// appView.ctx80.drawImage(appView.canvas2, 0, 0);
-					appView.ctx80.drawImage(appView.canvas2, -1 * 0.1 * IMAGE_WIDTH, -1 * 0.1 * IMAGE_WIDTH);
 				},
 				creatAndRender(per) {
 					const realPer = per/100;
