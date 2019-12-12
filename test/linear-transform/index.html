@@ -20,9 +20,24 @@
 	</head>
 
 	<body>
+		<h1>将伪3d视角的地图，转换到俯瞰的视角</h1>
+		<h5>可以点击下方按钮，把上次做到一半的地图照片导入进来不加载地图也可以，就是得重新绘制地图</h5>
+		<div id="upload">加载地图<input type="file" id="add-upload-input" accept="image/*" class="page2-btn-upload button" /></div>
+		<br>
+
+		<h2 id="working-hint"></h2>
+
+		<h1>原图</h1>
 		<canvas id="cvs"></canvas>
+
+		<h1>俯瞰</h1>
 		<canvas id="cvs2"></canvas>
+
 		<canvas id="cvs3"></canvas>
+
+
+		<h1>生成结果</h1>
+		<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
 		<script type="text/javascript" src="../linear/axis.js"></script>
 		<script>
 			const SQRT_3 = Math.sqrt(3);
@@ -82,23 +97,18 @@
 				axis2: null,
 				axis3: null,
 				imgData: [],
+				$addUploadInput: $('#add-upload-input'),
+				$workingHint: $('#working-hint'),
 				init: async function() {
+					appView.$addUploadInput.change(appView.uploadImageHandler);
+
 					appView.ctx = appView.initCanvas(appView.canvas);
 					appView.ctx2 = appView.initCanvas(appView.canvas2);
 					appView.ctx3 = appView.initCanvas(appView.canvas3);
 					appView.initAxis();
 					appView.initAxis2();
 					appView.initAxis3();
-					await appView.initImage();
-					// appView.reverseImage();
-					appView.creatAndRender(80);
-					appView.creatAndRender(50);
-					appView.creatAndRender(40);
-					appView.creatAndRender(30);
-					// 渲染坐标轴
-					appView.axis.render();
-					appView.axis2.render();
-					appView.axis3.render();
+
 				},
 				initCanvas: function(canvas, per = 1) {
 					const model = appController.getModel();
@@ -153,9 +163,41 @@
 						model.axisReverse
 					);
 				},
-				initImage() {
+				uploadImageHandler: function(e) {
+					const model = appController.getModel();
+					let file = e.target.files[0];
+					let _temp, datas;
+					// 确认选择的文件是图片
+					if (file.type.indexOf('image') != 0) return;
+					let reader = new FileReader();
+					reader.readAsDataURL(file);
+					reader.onload = async function(e) {
+						// 图片base64化
+						// let newUrl = this.result;
+						// let image = new Image();
+						// image.src = e.target.result;
+						// image.onload = function() {
+						// 	_temp = document.getElementById('canvas-upload-image');
+						// 	_temp = _temp.getContext('2d');
+						// 	_temp.drawImage(image, 0, 0);
+						// 	appView.readDatasToMap(_temp.getImageData(0, 0, model.result_canvas_total_width, model.result_canvas_total_height)
+						// 		.data);
+						// }
+
+						await appView.initImage(e.target.result);
+						// appView.reverseImage();
+						appView.creatAndRender(50);
+
+						// 渲染坐标轴
+						appView.axis.render();
+						appView.axis2.render();
+						appView.axis3.render();
+					}
+				},
+				initImage(src) {
 					return new Promise((res, rej) => {
 						console.log(`init image start`);
+						appView.$workingHint.text('图片处理中...');
 						let imgData = [];
 						let imgDataTransformed = [];
 						let img = new Image();
@@ -187,9 +229,11 @@
 								}
 							}
 							console.log(`init image complete`);
+							appView.$workingHint.text('图片处理完成');
 							res();
 						};
-						img.src = '../../img/macao-all-2048.jpg';
+						// img.src = '../../img/新加坡工程文件.jpg';
+						img.src = src;
 					});
 				},
 				renderTransformPoint(index, color) {
@@ -240,7 +284,11 @@
 					p.render(appView.ctx3, color);
 				},
 				creatAndRender(per) {
-					const realPer = per/100;
+					let h = document.createElement('h1');
+					h.innerText = per + '%';
+
+
+					const realPer = per / 100;
 					const model = appController.getModel();
 					let canvas = document.createElement('canvas');
 					canvas.width = model.canvasInfo.width * realPer;
@@ -249,11 +297,12 @@
 					ctx.rect(0, 0, model.canvasInfo.width, model.canvasInfo.height);
 					ctx.fillStyle = '#000000';
 					ctx.fill();
-					
-					let delta = (1-realPer)/2;
+
+					let delta = (1 - realPer) / 2;
 					ctx.drawImage(appView.canvas2, -1 * delta * IMAGE_WIDTH, -1 * delta * IMAGE_WIDTH);
-					
-					document.body.appendChild(canvas)
+
+					document.body.appendChild(h);
+					document.body.appendChild(canvas);
 				}
 			};
 

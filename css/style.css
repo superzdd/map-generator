@@ -159,6 +159,28 @@ div.exit {
 	border: solid 1px #000000
 }
 
+#map-transform{
+	position: fixed;
+	right: 10px;
+	top: 150px;
+	width: 150px;
+	height: 100px;
+	border: solid 1px #000000;
+	
+	text-align: center;
+	background: #000000;
+	color:#FFFFFF;
+	line-height: 100px;
+}
+
+#map-transform a{
+	position: absolute;
+	left:0;
+	top:0;
+	width:100%;
+	height:100%;
+}
+
 #type-container div.hl {
 	border: solid 5px red;
 }
