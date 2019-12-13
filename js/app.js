@@ -87,7 +87,7 @@ let tilePoint = function(lineIndex = 0, columnIndex = 0, width = 0, type = TYPE_
 		let _y = this.lineIndex * _w;
 		let _x = this.columnIndex * _w;
 
-		ctx.strokeStyle = '#ffffff';
+		ctx.strokeStyle = '#000000';
 		ctx.fillStyle = TYPE_TILE_INFO[this.type].color;
 
 		ctx.clearRect(_x, _y, _w, _w);
@@ -111,7 +111,7 @@ let appModel = {
 	mini_grid_count: 1,
 	tiles_each_line: 13, // 每行的单元格数量
 	tiles_each_column: 9, // 每列的单元格数量
-	div_grid_width: 20, // 页面展示的每个div正方形格子的宽高
+	// div_grid_width: 20, // 页面展示的每个div正方形格子的宽高
 	canvas_tile_width: 10, // 最终生成到canvas时每个正方形格子的宽高
 	result_canvas_total_width: 0, // 最终生成canvas地图的总宽度
 	result_canvas_total_height: 0, // 最终生成canvas地图的总高度
@@ -137,6 +137,23 @@ let appController = {
 	},
 	getModel: function() {
 		return appModel;
+	},
+	/**
+	 * 更新地图中每行单元格的数量
+	 * @param {Object} n
+	 */
+	updateTilesPerLine: function(n) {
+		// 根据传过来的数量,在有背景地图的条件下,需要同时计算每列单元格的数量,单元格的宽度
+		appModel.tiles_each_line = n;
+
+		if (appView.backgroundInfo.width <= 0) {
+			return;
+		}
+
+		let eachTileWidth = appView.backgroundInfo.width / n;
+		appModel.tiles_each_column = Math.ceil(appView.backgroundInfo.height / eachTileWidth);
+
+		appController.init();
 	},
 	updateTileContainerInfo: function(width, height) {
 		appModel.tileContainerInfo.width = width;
@@ -177,7 +194,7 @@ let appController = {
 	updateTile(x, y, type, forceUpdate = false) {
 		x = x - appView.canvasTilesInfo.x;
 		y = y - appView.canvasTilesInfo.y;
-		const tileWidth = Math.ceil(appView.canvasTilesInfo.width);
+		const tileWidth = appView.canvasTilesInfo.width;
 		const lines = appModel.tiles_each_line; // 每行的单元格数量
 		const cols = appModel.tiles_each_column; // 每列的单元格数量
 
@@ -250,6 +267,8 @@ let appView = {
 	$print: $('#print'),
 	$type_container: $('#type-container'),
 	$canvas: $('#canvas'),
+	$iptGridsPerline: $('#ipt-grids-perline'),
+	$btnGridLineOK: $("#btn-grid-line-ok"),
 	canvasTilesInfo: {
 		x: 0, // 距离屏幕左边的距离
 		y: 0, // 距离屏幕上方的距离
@@ -282,8 +301,8 @@ let appView = {
 		appView.initResultCanvas();
 		appView.initUploadCanvas();
 		appView.initTypeGrids();
-
 		appView.$fillBlank.click(appView.fillBlank);
+		appView.$btnGridLineOK.click(appView.btnGridLineOKHandler);
 
 		document.addEventListener('keydown', function(e) {
 			// console.log(e.code);
@@ -325,6 +344,33 @@ let appView = {
 			height: appView.backgroundInfo.height + 'px'
 		});
 	},
+	canvasTileMouseMoveHandler: function(e) {
+		if (!appView.allowPainting) return;
+		if (!appView.currentPaintingColor) {
+			alert('请先选择一种地图类型');
+			return;
+		}
+
+		let {
+			pageX,
+			pageY
+		} = e;
+
+		appController.updateTile(pageX, pageY, appView.currentPaintingColor, true);
+	},
+	canvasTileMouseClickHandler: function(e) {
+		if (!appView.currentPaintingColor) {
+			alert('请先选择一种地图类型');
+			return;
+		}
+
+		let {
+			pageX,
+			pageY
+		} = e;
+
+		appController.updateTile(pageX, pageY, appView.currentPaintingColor, false);
+	},
 	initCanvasTiles: function() {
 		console.log('initTilesCtx');
 		const model = appController.getModel();
@@ -345,34 +391,10 @@ let appView = {
 		appView.canvasTilesInfo.ctx = ctx;
 		appView.canvasTilesInfo.width = model.tileContainerInfo.width / model.tiles_each_line;
 
-		$('#cvs-tiles').mousemove(function(e) {
-			if (!appView.allowPainting) return;
-			if (!appView.currentPaintingColor) {
-				alert('请先选择一种地图类型');
-				return;
-			}
-
-			let {
-				pageX,
-				pageY
-			} = e;
-
-			appController.updateTile(pageX, pageY, appView.currentPaintingColor, true);
-		});
-
-		$('#cvs-tiles').click(function(e) {
-			if (!appView.currentPaintingColor) {
-				alert('请先选择一种地图类型');
-				return;
-			}
-
-			let {
-				pageX,
-				pageY
-			} = e;
-
-			appController.updateTile(pageX, pageY, appView.currentPaintingColor, false);
-		});
+		$('#cvs-tiles').unbind('mousemove', appView.canvasTileMouseMoveHandler);
+		$('#cvs-tiles').unbind('click', appView.canvasTileMouseClickHandler);
+		$('#cvs-tiles').mousemove(appView.canvasTileMouseMoveHandler);
+		$('#cvs-tiles').click(appView.canvasTileMouseClickHandler);
 	},
 	initTypeGrids: function() {
 		for (let key of Object.keys(TYPE_TILE)) {
@@ -425,6 +447,20 @@ let appView = {
 			height: model.result_canvas_total_height,
 		});
 	},
+	btnGridLineOKHandler: function() {
+		let n = appView.$iptGridsPerline.val();
+		if (!n || isNaN(n) || n <= 0) {
+			alert('请输入正确的单元格数量');
+			return;
+		}
+
+		n = parseInt(n);
+		appController.updateTilesPerLine(n);
+		appView.initTileContainer();
+		appView.initCanvasTiles();
+		appView.initAllTiles();
+		appView.initResultCanvas();
+	},
 	uploadImageHandler: function(e) {
 		const model = appController.getModel();
 		let file = e.target.files[0];
@@ -460,7 +496,7 @@ let appView = {
 			image.onload = function() {
 				let w = image.width;
 				let h = image.height;
-				if (w > 1024) {
+				if (w < 1024) {
 					w = 1024;
 					h = w * image.height / image.width;
 				}

@@ -2,20 +2,32 @@
 <html>
 	<head>
 		<meta charset="utf-8" />
-		<title></title>
+		<title>地图描点工具</title>
 		<link rel="stylesheet" href="css/style.css">
 	</head>
 	<body>
 		<h1>step1 加载地图</h1>
+		<h5>载入地图背景</h5>
+		<div id="upload-bg">加载地图背景<input type="file" id="add-upload-bg-input" accept="image/*" class="page2-btn-upload button" /></div>
+		
+		<h1>step2 载入上次的地图描点</h1>
 		<h5>可以点击下方按钮，把上次做到一半的地图照片导入进来不加载地图也可以，就是得重新绘制地图</h5>
 		<div id="upload">加载地图<input type="file" id="add-upload-input" accept="image/*" class="page2-btn-upload button" /></div>
 		<div id="upload-image-container">
 			<canvas id="canvas-upload-image" width="1" height="1"></canvas>
 		</div>
 
-		<div id="upload-bg">加载地图背景<input type="file" id="add-upload-bg-input" accept="image/*" class="page2-btn-upload button" /></div>
-
-		<h1>step2 绘制地图</h1>
+		<h1>step3 绘制地图</h1>
+		<h2>step3.1 设置每行的单元格数量</h2>
+		<div id="grid-setting-container">
+			<input type="tel" id="ipt-grids-perline"/>
+			<div id="btn-grid-line-ok">
+				刷新
+			</div>
+		</div>
+		
+		<h2>step3.2 绘制单元格颜色</h2>
+		
 		<h5>下方几个单元格用于绘制地图上的每一个小方格，鼠标点击那个单元格，后面在地图里就会绘制那种地图类型</h5>
 		<h5>tip1：点击单元格即可绘制，绘制完成的单元格再点击一次会取消绘制</h5>
 		<h5>tip2：按住键盘a键，将鼠标在地图上拖动可实现移动绘制</h5>
@@ -26,11 +38,11 @@
 			<canvas id="cvs-tiles"></canvas>
 		</div>
 
-		<h1>step3 校验地图</h1>
+		<h1>step4 校验地图</h1>
 		<h5>检查所有区域是否还有漏填的</h5>
 		<div id="fill-blank" class="btn">使用黑色填充其他单元格</div>
 
-		<h1>step4 生成地图</h1>
+		<h1>step5 生成地图</h1>
 		<h5>点击下方按钮生成结果</h5>
 		<div id="print" class="btn">生成结果</div>
 		<h5>json配置信息</h5>
